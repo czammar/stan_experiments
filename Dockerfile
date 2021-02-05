@@ -1,5 +1,5 @@
-# Having fun :)
-ARG BASE_CONTAINER=jupyter/scipy-notebook
+# Choose your desired base image
+ARG BASE_CONTAINER=jupyter/minimal-notebook:latest
 FROM $BASE_CONTAINER
 
 LABEL maintainer="Cesar Zamora"
@@ -13,8 +13,36 @@ RUN apt-get update && \
 
 USER $NB_UID
 
-# Install some conda packages
-RUN conda install --quiet --yes pystan && \
-    conda clean --all -f -y && \
-    fix-permissions "${CONDA_DIR}" && \
-    fix-permissions "/home/${NB_USER}"
+# name your environment and choose python 3.x version
+ARG conda_env=python38
+ARG py_ver=3.8
+
+# you can add additional libraries you want conda to install by listing them below the first line and ending with "&& \"
+RUN conda create --quiet --yes -p $CONDA_DIR/envs/$conda_env python=$py_ver ipython ipykernel && \
+    conda install numpy scipy matplotlib seaborn -n $conda_env && \
+    conda install openpyxl statsmodels scikit-learn pandas -n $conda_env && \
+    conda install -c conda-forge pystan --yes -n $conda_env &&\
+    conda clean --all -f -y
+
+# alternatively, you can comment out the lines above and uncomment those below
+# if you'd prefer to use a YAML file present in the docker build context
+
+# COPY --chown=${NB_UID}:${NB_GID} environment.yml /home/$NB_USER/tmp/
+# RUN cd /home/$NB_USER/tmp/ && \
+#     conda env create -p $CONDA_DIR/envs/$conda_env -f environment.yml && \
+#     conda clean --all -f -y
+
+
+# create Python 3.x environment and link it to jupyter
+RUN $CONDA_DIR/envs/${conda_env}/bin/python -m ipykernel install --user --name=${conda_env} && \
+    fix-permissions $CONDA_DIR && \
+    fix-permissions /home/$NB_USER
+
+# any additional pip installs can be added by uncommenting the following line
+# RUN $CONDA_DIR/envs/${conda_env}/bin/pip install 
+
+# prepend conda environment to path
+ENV PATH $CONDA_DIR/envs/${conda_env}/bin:$PATH
+
+# if you want this environment to be the default one, uncomment the following line:
+ENV CONDA_DEFAULT_ENV ${conda_env}

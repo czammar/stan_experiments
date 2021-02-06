@@ -1,0 +1,12 @@
+#notebook
+#jupyterlab
+#pylint
+cython
+arviz
+pystan
+stan-utility
+#matplotlib
+#statsmodels 
+#scikit-learn 
+#pandas 
+openpyxl
